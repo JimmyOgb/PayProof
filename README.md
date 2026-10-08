@@ -46,6 +46,15 @@ PayProof enables merchants to accept real USDC payments on the **Arc Mainnet** (
 
 ---
 
+## Production Deployment (Phase 4A)
+
+* **Public Production URL**: [https://payproof-puce.vercel.app](https://payproof-puce.vercel.app)
+* **Vercel Project**: `payproof` (`jamism123/payproof`)
+* **Environment**: Production (Arc Mainnet Chain ID: `5042`)
+* **Deployment Status**: **Production frontend deployed; real mainnet payment verification pending.**
+
+---
+
 ## Verification & Commands
 
 ```bash
@@ -63,6 +72,24 @@ npm run lint
 
 # Build production bundle
 npm run build
+```
+
+---
+
+## Local Development Instructions
+
+To run PayProof locally:
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Copy environment template
+cp frontend/.env.example frontend/.env.local
+
+# 3. Start local development server
+npm run dev
+# The application will be available at http://localhost:3000
 ```
 
 ---
