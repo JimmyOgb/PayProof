@@ -70,6 +70,7 @@ export async function sendUSDCPayment(
     abi: ERC20_ABI,
     functionName: "transfer",
     args: [merchant, params.amountRaw],
+    value: 0n,
   } as any);
 
   return hash;

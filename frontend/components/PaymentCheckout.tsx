@@ -307,12 +307,60 @@ export function PaymentCheckout({ encodedRequest }: PaymentCheckoutProps) {
           </div>
 
           {/* Details Table */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, background: 'var(--bg)', padding: '12px 14px', borderRadius: 'var(--radius)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--muted)', fontWeight: 600 }}>Recipient (Merchant Address):</span>
+                <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>Full Address</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
+                <span
+                  style={{
+                    fontFamily: 'monospace',
+                    fontWeight: 600,
+                    fontSize: 12,
+                    color: 'var(--fg)',
+                    wordBreak: 'break-all',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {request.merchantAddress}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(request.merchantAddress);
+                  }}
+                  title="Copy full merchant address"
+                  style={{
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 6,
+                    padding: '4px 8px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontSize: 11,
+                    color: 'var(--fg)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Copy size={12} /> Copy
+                </button>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-              <span style={{ color: 'var(--muted)' }}>Merchant Recipient:</span>
-              <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--fg)' }}>
-                {truncate(request.merchantAddress)}
+              <span style={{ color: 'var(--muted)' }}>Asset & Contract:</span>
+              <span style={{ fontWeight: 600, color: 'var(--fg)', fontFamily: 'monospace', fontSize: 12 }}>
+                Official USDC ({truncate(request.assetAddress)})
               </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+              <span style={{ color: 'var(--muted)' }}>Settlement Network:</span>
+              <span style={{ fontWeight: 600, color: 'var(--fg)' }}>Arc Mainnet (Chain ID 5042)</span>
             </div>
 
             {request.reference && (
@@ -331,11 +379,6 @@ export function PaymentCheckout({ encodedRequest }: PaymentCheckoutProps) {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-              <span style={{ color: 'var(--muted)' }}>Network & Asset:</span>
-              <span style={{ fontWeight: 600, color: 'var(--fg)' }}>Arc (5042) &middot; Official USDC</span>
-            </div>
-
             {request.expiresAt && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                 <span style={{ color: 'var(--muted)' }}>Expires:</span>
@@ -349,24 +392,20 @@ export function PaymentCheckout({ encodedRequest }: PaymentCheckoutProps) {
           {/* Pre-transaction Safety Notice */}
           <div
             style={{
-              padding: '12px 14px',
+              padding: '14px 16px',
               borderRadius: 'var(--radius)',
               background: 'rgba(0, 102, 255, 0.04)',
               border: '1px solid rgba(0, 102, 255, 0.15)',
-              fontSize: 12,
-              color: 'var(--muted)',
-              lineHeight: 1.5,
+              fontSize: 13,
+              color: 'var(--fg)',
+              lineHeight: 1.55,
               marginBottom: 20,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)', fontWeight: 600, marginBottom: 2 }}>
-              <ShieldCheck size={14} /> Direct Non-Custodial Transfer
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)', fontWeight: 700, marginBottom: 4 }}>
+              <ShieldCheck size={16} /> Direct Non-Custodial Transfer Notice
             </div>
-            Funds transfer directly from your wallet to merchant address{' '}
-            <strong style={{ fontFamily: 'monospace', color: 'var(--fg)' }}>
-              {truncate(request.merchantAddress)}
-            </strong>
-            . PayProof never holds custody.
+            Your wallet will send exactly <strong>{request.amountFormatted} USDC</strong> directly to the merchant address above. PayProof does not receive or custody your funds. No token approvals (approve) or contract permits are requested.
           </div>
 
           {/* Same Wallet Notice */}
@@ -534,8 +573,8 @@ export function PaymentCheckout({ encodedRequest }: PaymentCheckoutProps) {
                   borderRadius: 'var(--radius)',
                   background: 'var(--primary)',
                   color: '#fff',
-                  fontSize: 16,
-                  fontWeight: 600,
+                  fontSize: 15,
+                  fontWeight: 700,
                   border: 'none',
                   cursor: isSigning ? 'not-allowed' : 'pointer',
                   opacity: isSigning ? 0.75 : 1,
@@ -545,12 +584,15 @@ export function PaymentCheckout({ encodedRequest }: PaymentCheckoutProps) {
                 {isSigning ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    Confirm in Wallet...
+                    Approve Transfer in Wallet...
                   </>
                 ) : (
-                  `Pay ${request.amountFormatted} USDC`
+                  `Send ${request.amountFormatted} USDC to Merchant`
                 )}
               </button>
+              <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--muted)', marginTop: -2 }}>
+                Executes standard ERC-20 transfer to merchant &middot; 0 ETH value
+              </div>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <WalletConnect />
               </div>
