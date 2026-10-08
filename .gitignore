@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/cache
+
+# Testing
+coverage/
+
+# Next.js build output
+.next/
+out/
+
+# Production build output
+build/
+dist/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment files and secrets (Strict: never commit secrets)
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+!.env.example
+
+# Sensitive files / keys
+*.pem
+*.key
+*.cert
+*.pfx
+*.keystore
+id_rsa
+id_ecdsa
+id_ed25519
+
+# Editor and OS files
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+
+# Vercel
+.vercel
+
+# TypeScript cache
+*.tsbuildinfo
+next-env.d.ts

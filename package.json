@@ -1,0 +1,15 @@
+{
+  "name": "payproof",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PayProof — Real USDC payment option for merchants on Arc mainnet",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "start": "npm --prefix frontend run start",
+    "lint": "npm --prefix frontend run lint",
+    "typecheck": "npm --prefix frontend run typecheck",
+    "test": "npm --prefix frontend run test",
+    "test:smoke": "node scripts/smoke-test-arc.mjs"
+  }
+}
