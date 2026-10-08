@@ -10,6 +10,10 @@
     "lint": "npm --prefix frontend run lint",
     "typecheck": "npm --prefix frontend run typecheck",
     "test": "npm --prefix frontend run test",
-    "test:smoke": "node scripts/smoke-test-arc.mjs"
+    "test:smoke": "node scripts/smoke-test-arc.mjs",
+    "compile": "node scripts/compile.js"
+  },
+  "devDependencies": {
+    "solc": "^0.8.28"
   }
 }

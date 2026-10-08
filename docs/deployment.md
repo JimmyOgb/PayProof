@@ -21,7 +21,23 @@ The frontend is built as a standalone Next.js App Router application designed fo
 
 ## Contracts Deployment (Arc Mainnet)
 
-- Located in `contracts/`.
-- Kept completely separate from the frontend lifecycle.
-- For V1, direct Arc USDC settlement is natively supported without requiring custom smart contracts.
-- Any future contracts will be deployed via Hardhat/Foundry in `scripts/`.
+- Smart Contract: [`contracts/PayProofPayments.sol`](file:///C:/Users/NO%20GO%20NO/payproof/contracts/PayProofPayments.sol)
+- Target Chain ID: `5042` (Arc Mainnet)
+- USDC Token Address: `0x3600000000000000000000000000000000000000`
+- Compilation Command:
+  ```bash
+  npm run compile
+  ```
+- Deployment Script: [`scripts/deploy.mjs`](file:///C:/Users/NO%20GO%20NO/payproof/scripts/deploy.mjs)
+  ```bash
+  export DEPLOYER_PRIVATE_KEY="0x..." # Keep secure, never commit
+  node scripts/deploy.mjs
+  ```
+- Live Deployed Contract Address on Arc Mainnet:
+  `0x87d4a1669336882e3355b83f953ad3b8b944c908`
+- Deployment Transaction Hash:
+  [`0x47012ff7ac41ea8ab8f12fcaf1ac28958015c8f0010466a1f2049ebcead308f6`](https://explorer.arc.io/tx/0x47012ff7ac41ea8ab8f12fcaf1ac28958015c8f0010466a1f2049ebcead308f6)
+- Configured in `frontend/.env.local` and Vercel production:
+  ```bash
+  NEXT_PUBLIC_ARC_PAYMENTS_CONTRACT_ADDRESS="0x87d4a1669336882e3355b83f953ad3b8b944c908"
+  ```

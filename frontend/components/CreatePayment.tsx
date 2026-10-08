@@ -462,6 +462,12 @@ export function CreatePayment() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--muted)' }}>Payment ID:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--fg)', fontSize: 12 }}>
+                    {createdRequest.id}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--muted)' }}>Recipient:</span>
                   <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--fg)' }}>
                     {truncate(createdRequest.merchantAddress)}

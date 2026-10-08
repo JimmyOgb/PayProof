@@ -11,7 +11,7 @@ import {
   formatDateTimeSafe,
   formatTimeSafe,
 } from '@/lib/payments';
-import { ARC_MAINNET_CHAIN_ID, DEFAULT_ARC_EXPLORER_URL } from '@/lib/arc';
+import { ARC_MAINNET_CHAIN_ID, DEFAULT_ARC_EXPLORER_URL, getArcConfig } from '@/lib/arc';
 import { WalletConnect } from '@/components/WalletConnect';
 import { useIsMounted } from '@/lib/wallet';
 import {
@@ -77,7 +77,10 @@ export function PaymentCheckout({ encodedRequest }: PaymentCheckoutProps) {
     receipt,
     error,
     isSigning,
+    signingStep,
     isVerifying,
+    needsApproval,
+    contractConfigured,
     initiatePayment,
     reset,
   } = useUSDCPayment(
@@ -352,11 +355,27 @@ export function PaymentCheckout({ encodedRequest }: PaymentCheckoutProps) {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+              <span style={{ color: 'var(--muted)' }}>Payment ID:</span>
+              <span style={{ fontWeight: 600, color: 'var(--fg)', fontFamily: 'monospace', fontSize: 12 }}>
+                {request.id}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
               <span style={{ color: 'var(--muted)' }}>Asset & Contract:</span>
               <span style={{ fontWeight: 600, color: 'var(--fg)', fontFamily: 'monospace', fontSize: 12 }}>
                 Official USDC ({truncate(request.assetAddress)})
               </span>
             </div>
+
+            {getArcConfig().paymentsContractAddress && getArcConfig().paymentsContractAddress !== '0x0000000000000000000000000000000000000000' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: 'var(--muted)' }}>Settlement Contract:</span>
+                <span style={{ fontWeight: 600, color: 'var(--primary)', fontFamily: 'monospace', fontSize: 12 }}>
+                  {truncate(getArcConfig().paymentsContractAddress)}
+                </span>
+              </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
               <span style={{ color: 'var(--muted)' }}>Settlement Network:</span>
@@ -389,24 +408,98 @@ export function PaymentCheckout({ encodedRequest }: PaymentCheckoutProps) {
             )}
           </div>
 
-          {/* Pre-transaction Safety Notice */}
-          <div
-            style={{
-              padding: '14px 16px',
-              borderRadius: 'var(--radius)',
-              background: 'rgba(0, 102, 255, 0.04)',
-              border: '1px solid rgba(0, 102, 255, 0.15)',
-              fontSize: 13,
-              color: 'var(--fg)',
-              lineHeight: 1.55,
-              marginBottom: 20,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)', fontWeight: 700, marginBottom: 4 }}>
-              <ShieldCheck size={16} /> Direct Non-Custodial Transfer Notice
+          {/* Settlement Plan & Security Notice */}
+          {!contractConfigured ? (
+            <div
+              style={{
+                padding: '14px 16px',
+                borderRadius: 'var(--radius)',
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                fontSize: 13,
+                color: '#ef4444',
+                lineHeight: 1.5,
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, marginBottom: 4 }}>
+                <AlertTriangle size={16} /> PayProof Settlement Contract Not Configured
+              </div>
+              Settlement is disabled because NEXT_PUBLIC_ARC_PAYMENTS_CONTRACT_ADDRESS is missing.
+              To protect merchants and payers, silent fallback to direct transfers is strictly prohibited.
             </div>
-            Your wallet will send exactly <strong>{request.amountFormatted} USDC</strong> directly to the merchant address above. PayProof does not receive or custody your funds. No token approvals (approve) or contract permits are requested.
-          </div>
+          ) : (
+            <div
+              style={{
+                padding: '14px 16px',
+                borderRadius: 'var(--radius)',
+                background: 'rgba(0, 102, 255, 0.04)',
+                border: '1px solid rgba(0, 102, 255, 0.15)',
+                fontSize: 13,
+                color: 'var(--fg)',
+                lineHeight: 1.55,
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)', fontWeight: 700, marginBottom: 10 }}>
+                <ShieldCheck size={16} /> On-Chain Settlement Plan
+              </div>
+              {needsApproval ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 'var(--radius)',
+                      background: signingStep === 'APPROVING' ? 'rgba(0, 102, 255, 0.12)' : 'var(--card)',
+                      border: signingStep === 'APPROVING' ? '1px solid var(--primary)' : '1px solid var(--border)',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--fg)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: 'var(--primary)', fontWeight: 800 }}>First transaction:</span>
+                      Approve exactly {request.amountFormatted} USDC for PayProof
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+                      Grants one-time permission strictly for {request.amountFormatted} USDC to the official PayProof settlement contract. Unlimited allowance is never requested.
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 'var(--radius)',
+                      background: signingStep === 'PAYING' ? 'rgba(0, 102, 255, 0.12)' : 'var(--card)',
+                      border: signingStep === 'PAYING' ? '1px solid var(--primary)' : '1px solid var(--border)',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--fg)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: 'var(--primary)', fontWeight: 800 }}>Second transaction:</span>
+                      Pay {request.amountFormatted} USDC through PayProof
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+                      Settles USDC directly to merchant, emits on-chain PaymentCompleted event, and generates a verifiable receipt.
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 'var(--radius)',
+                    background: signingStep === 'PAYING' ? 'rgba(0, 102, 255, 0.12)' : 'var(--card)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--fg)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: '#10B981', fontWeight: 800 }}>Single transaction:</span>
+                    Pay {request.amountFormatted} USDC through PayProof
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+                    USDC allowance is already sufficient. Only the payment transaction will be requested.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Same Wallet Notice */}
           {isCustomerMerchantSame && (
@@ -562,7 +655,7 @@ export function PaymentCheckout({ encodedRequest }: PaymentCheckoutProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
               <button
                 onClick={initiatePayment}
-                disabled={isSigning}
+                disabled={isSigning || !contractConfigured}
                 style={{
                   width: '100%',
                   display: 'inline-flex',
@@ -571,27 +664,37 @@ export function PaymentCheckout({ encodedRequest }: PaymentCheckoutProps) {
                   gap: 8,
                   padding: '14px 20px',
                   borderRadius: 'var(--radius)',
-                  background: 'var(--primary)',
+                  background: !contractConfigured ? '#94a3b8' : 'var(--primary)',
                   color: '#fff',
                   fontSize: 15,
                   fontWeight: 700,
                   border: 'none',
-                  cursor: isSigning ? 'not-allowed' : 'pointer',
+                  cursor: isSigning || !contractConfigured ? 'not-allowed' : 'pointer',
                   opacity: isSigning ? 0.75 : 1,
-                  boxShadow: '0 4px 16px rgba(0, 102, 255, 0.25)',
+                  boxShadow: !contractConfigured ? 'none' : '0 4px 16px rgba(0, 102, 255, 0.25)',
                 }}
               >
                 {isSigning ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    Approve Transfer in Wallet...
+                    {signingStep === 'APPROVING'
+                      ? `Step 1/2: Approve exactly ${request.amountFormatted} USDC in Wallet...`
+                      : `Step 2/2: Confirm Payment of ${request.amountFormatted} USDC in Wallet...`}
                   </>
+                ) : !contractConfigured ? (
+                  'Settlement Contract Not Configured'
+                ) : needsApproval ? (
+                  `Approve & Pay ${request.amountFormatted} USDC`
                 ) : (
-                  `Send ${request.amountFormatted} USDC to Merchant`
+                  `Pay ${request.amountFormatted} USDC through PayProof`
                 )}
               </button>
               <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--muted)', marginTop: -2 }}>
-                Executes standard ERC-20 transfer to merchant &middot; 0 ETH value
+                {!contractConfigured
+                  ? 'Payment disabled: Smart contract address must be configured for Arc Mainnet'
+                  : needsApproval
+                  ? 'Step 1: One-time exact USDC approval · Step 2: PayProof settlement directly to merchant'
+                  : 'Single transaction: PayProof non-custodial contract settlement directly to merchant'}
               </div>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <WalletConnect />

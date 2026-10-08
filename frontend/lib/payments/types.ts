@@ -58,6 +58,10 @@ export interface PaymentVerification {
   blockNumber?: bigint;
   verifiedAt: number;
   failureReason?: string;
+  contractAddress?: `0x${string}`;
+  paymentId?: string;
+  requestHash?: `0x${string}`;
+  eventName?: "PaymentCompleted" | "Transfer";
 }
 
 /**
@@ -80,4 +84,7 @@ export interface PaymentReceipt {
   verifiedAt: number;
   reference?: string;
   description?: string;
+  contractAddress?: `0x${string}`;
+  requestHash?: `0x${string}`;
+  eventName?: "PaymentCompleted" | "Transfer";
 }

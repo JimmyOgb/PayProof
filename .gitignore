@@ -57,3 +57,7 @@ id_ed25519
 # TypeScript cache
 *.tsbuildinfo
 next-env.d.ts
+
+# Build and demo artifacts
+contracts/artifacts/
+demo/

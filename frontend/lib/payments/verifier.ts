@@ -9,10 +9,11 @@ import { PaymentVerification } from "./types";
 import {
   ARC_MAINNET_CHAIN_ID,
   DEFAULT_ARC_USDC_ADDRESS,
-  DEFAULT_ARC_EXPLORER_URL,
+  DEFAULT_ARC_PAYMENTS_ADDRESS,
+  getArcConfig,
 } from "../arc/config";
 import { REQUIRED_PAYMENT_CONFIRMATIONS } from "./constants";
-import { formatUSDCAmount } from "./units";
+import { formatPaymentIdToBytes32, PAYPROOF_PAYMENTS_ABI } from "./transfer";
 
 /**
  * Standard ERC-20 ABI subset required for USDC transfer and event parsing
@@ -74,6 +75,9 @@ export interface VerifyPaymentInput {
   expectedAsset?: `0x${string}`;
   expectedChainId?: number;
   requiredConfirmations?: number;
+  expectedPaymentId?: string;
+  expectedRequestHash?: `0x${string}`;
+  contractAddress?: `0x${string}`;
 }
 
 export interface PureVerificationInput extends VerifyPaymentInput {
@@ -88,6 +92,10 @@ export interface PureVerificationInput extends VerifyPaymentInput {
  *
  * FAILS CLOSED: Any missing, malformed, or unproven criteria results in
  * verification status FAILED or PENDING.
+ *
+ * Supports both:
+ * 1. PayProofPayments contract settlement (PaymentCompleted event + USDC Transfer)
+ * 2. Direct ERC-20 Transfer fallback settlement (Transfer event on Arc USDC)
  */
 export function verifyPaymentPure(input: PureVerificationInput): PaymentVerification {
   const verifiedAt = Date.now();
@@ -104,6 +112,8 @@ export function verifyPaymentPure(input: PureVerificationInput): PaymentVerifica
     isFinal: false,
     confirmations: 0,
     verifiedAt,
+    paymentId: input.expectedPaymentId,
+    requestHash: input.expectedRequestHash,
   };
 
   // Rule 0: Basic parameter sanity
@@ -172,7 +182,189 @@ export function verifyPaymentPure(input: PureVerificationInput): PaymentVerifica
     };
   }
 
-  // Rule 4: Parse and inspect ERC-20 Transfer logs
+  // --- Check for Contract Settlement: PaymentCompleted Event ---
+  let paymentCompletedLogs: Array<{
+    address: `0x${string}`;
+    args: {
+      paymentId: `0x${string}`;
+      payer: `0x${string}`;
+      merchant: `0x${string}`;
+      amount: bigint;
+      requestHash: `0x${string}`;
+    };
+  }> = [];
+
+  try {
+    const parsedCompleted = parseEventLogs({
+      abi: PAYPROOF_PAYMENTS_ABI,
+      eventName: "PaymentCompleted",
+      logs: input.receipt.logs,
+    });
+    paymentCompletedLogs = parsedCompleted as any;
+  } catch {
+    // No PaymentCompleted events or failed to parse
+  }
+
+  // Check if this was a PayProof contract call
+  if (paymentCompletedLogs && paymentCompletedLogs.length > 0) {
+    const event = paymentCompletedLogs[0];
+
+    // Verify contract address if specified
+    if (input.contractAddress && !isAddressEqual(event.address, input.contractAddress)) {
+      return {
+        ...baseResult,
+        sender: event.args.payer,
+        recipient: event.args.merchant,
+        contractAddress: event.address,
+        amount: event.args.amount,
+        blockNumber: input.receipt.blockNumber,
+        txSuccess: true,
+        failureReason: `PaymentCompleted event emitted by unexpected contract address (${event.address}).`,
+      };
+    }
+
+    // Verify merchant address
+    if (!isAddressEqual(event.args.merchant, input.expectedMerchant)) {
+      return {
+        ...baseResult,
+        sender: event.args.payer,
+        recipient: event.args.merchant,
+        contractAddress: event.address,
+        amount: event.args.amount,
+        blockNumber: input.receipt.blockNumber,
+        txSuccess: true,
+        failureReason: `Contract settlement merchant (${event.args.merchant}) does not match expected merchant (${input.expectedMerchant}).`,
+      };
+    }
+
+    // Verify amount
+    if (event.args.amount !== input.expectedAmount) {
+      return {
+        ...baseResult,
+        sender: event.args.payer,
+        recipient: event.args.merchant,
+        contractAddress: event.address,
+        amount: event.args.amount,
+        blockNumber: input.receipt.blockNumber,
+        txSuccess: true,
+        failureReason: `Contract settled amount (${event.args.amount} base units) does not match requested amount (${input.expectedAmount} base units).`,
+      };
+    }
+
+    // Verify payment ID if provided
+    if (input.expectedPaymentId) {
+      const expectedPidBytes32 = formatPaymentIdToBytes32(input.expectedPaymentId);
+      if (event.args.paymentId.toLowerCase() !== expectedPidBytes32.toLowerCase()) {
+        return {
+          ...baseResult,
+          sender: event.args.payer,
+          recipient: event.args.merchant,
+          contractAddress: event.address,
+          amount: event.args.amount,
+          blockNumber: input.receipt.blockNumber,
+          txSuccess: true,
+          failureReason: `Contract paymentId (${event.args.paymentId}) does not match expected paymentId (${expectedPidBytes32}).`,
+        };
+      }
+    }
+
+    // Verify request hash if provided
+    if (input.expectedRequestHash) {
+      if (event.args.requestHash.toLowerCase() !== input.expectedRequestHash.toLowerCase()) {
+        return {
+          ...baseResult,
+          sender: event.args.payer,
+          recipient: event.args.merchant,
+          contractAddress: event.address,
+          amount: event.args.amount,
+          blockNumber: input.receipt.blockNumber,
+          txSuccess: true,
+          failureReason: `Contract requestHash (${event.args.requestHash}) does not match expected requestHash (${input.expectedRequestHash}).`,
+        };
+      }
+    }
+
+    // Verify payer if expectedSender provided
+    if (input.expectedSender && !isAddressEqual(event.args.payer, input.expectedSender)) {
+      return {
+        ...baseResult,
+        sender: event.args.payer,
+        recipient: event.args.merchant,
+        contractAddress: event.address,
+        amount: event.args.amount,
+        blockNumber: input.receipt.blockNumber,
+        txSuccess: true,
+        failureReason: `Contract settlement payer (${event.args.payer}) does not match expected customer wallet (${input.expectedSender}).`,
+      };
+    }
+
+    // Confirmations calculation
+    let confirmations = 1;
+    if (input.currentBlockNumber !== undefined) {
+      if (input.currentBlockNumber >= input.receipt.blockNumber) {
+        confirmations = Number(
+          input.currentBlockNumber - input.receipt.blockNumber + 1n
+        );
+      } else {
+        confirmations = 0;
+      }
+    }
+
+    const isFinal = confirmations >= requiredConfirmations;
+    if (!isFinal) {
+      return {
+        status: "PENDING",
+        txHash: input.txHash,
+        sender: event.args.payer,
+        recipient: event.args.merchant,
+        amount: event.args.amount,
+        asset: expectedAsset,
+        contractAddress: event.address,
+        paymentId: input.expectedPaymentId,
+        requestHash: event.args.requestHash,
+        chainId: expectedChainId,
+        txSuccess: true,
+        isFinal: false,
+        confirmations,
+        blockNumber: input.receipt.blockNumber,
+        verifiedAt,
+        failureReason: `Awaiting confirmations: has ${confirmations}, requires ${requiredConfirmations}.`,
+      };
+    }
+
+    // Contract settlement fully verified!
+    return {
+      status: "VERIFIED",
+      txHash: input.txHash,
+      sender: event.args.payer,
+      recipient: event.args.merchant,
+      amount: event.args.amount,
+      asset: expectedAsset,
+      contractAddress: event.address,
+      paymentId: input.expectedPaymentId,
+      requestHash: event.args.requestHash,
+      chainId: expectedChainId,
+      txSuccess: true,
+      isFinal: true,
+      confirmations,
+      blockNumber: input.receipt.blockNumber,
+      verifiedAt,
+      eventName: "PaymentCompleted",
+    };
+  }
+
+  // If a contract address was specified, direct transfer cannot be accepted as settlement
+  if (input.contractAddress && input.contractAddress !== "0x0000000000000000000000000000000000000000") {
+    return {
+      ...baseResult,
+      sender: input.tx.from,
+      blockNumber: input.receipt.blockNumber,
+      txSuccess: true,
+      failureReason: "Payment completed on Arc but missing required PayProof PaymentCompleted contract event.",
+    };
+  }
+
+  // --- Direct ERC-20 Transfer Settlement Route (Historical/Testing Only) ---
   let transferLogs: Array<{
     address: `0x${string}`;
     args: { from: `0x${string}`; to: `0x${string}`; value: bigint };
@@ -207,7 +399,7 @@ export function verifyPaymentPure(input: PureVerificationInput): PaymentVerifica
     };
   }
 
-  // Rule 5: Filter for transfers on the verified USDC contract
+  // Filter for transfers on the verified USDC contract
   const usdcTransfers = transferLogs.filter((log) => {
     try {
       return isAddressEqual(log.address, expectedAsset);
@@ -226,7 +418,7 @@ export function verifyPaymentPure(input: PureVerificationInput): PaymentVerifica
     };
   }
 
-  // Rule 6: Match recipient with expected merchant address
+  // Match recipient with expected merchant address
   const merchantTransfers = usdcTransfers.filter((log) => {
     try {
       return isAddressEqual(log.args.to, input.expectedMerchant);
@@ -248,7 +440,7 @@ export function verifyPaymentPure(input: PureVerificationInput): PaymentVerifica
     };
   }
 
-  // Rule 7: Match transferred amount with expected amount
+  // Match transferred amount with expected amount
   const exactAmountTransfer = merchantTransfers.find(
     (log) => log.args.value === input.expectedAmount
   );
@@ -267,7 +459,7 @@ export function verifyPaymentPure(input: PureVerificationInput): PaymentVerifica
     };
   }
 
-  // Rule 8: If expectedSender was provided, verify sender match
+  // If expectedSender was provided, verify sender match
   if (input.expectedSender) {
     const isSenderMatch = isAddressEqual(
       exactAmountTransfer.args.from,
@@ -288,7 +480,7 @@ export function verifyPaymentPure(input: PureVerificationInput): PaymentVerifica
     }
   }
 
-  // Rule 9: Check block confirmations and finality
+  // Check block confirmations and finality
   let confirmations = 1;
   if (input.currentBlockNumber !== undefined) {
     if (input.currentBlockNumber >= input.receipt.blockNumber) {
@@ -320,7 +512,7 @@ export function verifyPaymentPure(input: PureVerificationInput): PaymentVerifica
     };
   }
 
-  // All 10 verification rules satisfied!
+  // Direct USDC transfer verified!
   return {
     status: "VERIFIED",
     txHash: input.txHash,
@@ -334,6 +526,7 @@ export function verifyPaymentPure(input: PureVerificationInput): PaymentVerifica
     confirmations,
     blockNumber: input.receipt.blockNumber,
     verifiedAt,
+    eventName: "Transfer",
   };
 }
 

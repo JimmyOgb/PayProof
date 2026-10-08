@@ -4,7 +4,7 @@
 [![USDC Native](https://img.shields.io/badge/USDC%20Native-0x3600...0000-2775CA?style=flat-square)](https://explorer.arc.io/token/0x3600000000000000000000000000000000000000)
 [![Next.js](https://img.shields.io/badge/Next.js-15.1.7-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7.3-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
-[![Tests Passing](https://img.shields.io/badge/Tests-65%2F65%20Passing-emerald?style=flat-square)](https://github.com/JimmyOgb/PayProof)
+[![Tests Passing](https://img.shields.io/badge/Tests-85%2F85%20Passing-emerald?style=flat-square)](https://github.com/JimmyOgb/PayProof)
 [![License: MIT](https://img.shields.io/badge/License-MIT-gray?style=flat-square)](LICENSE)
 
 > **Non-custodial USDC payment checkout and verification on Arc Mainnet.**  
@@ -37,10 +37,10 @@ Accepting cryptocurrency payments today places an unreasonable operational burde
 ## The Solution
 
 PayProof provides an intuitive, non-custodial checkout flow built specifically for **Arc Mainnet**:
-* **Direct Settlement**: Funds move directly from customer wallet $\rightarrow$ merchant wallet. PayProof never holds custody, touches private keys, or routes funds through escrow smart contracts.
-* **Independent Verification**: PayProof queries the blockchain directly via JSON-RPC. A payment is only marked `PAID` after verifying on-chain execution, contract address, recipient address, and exact 6-decimal base units.
+* **Dual-Track Settlement**: PayProof supports both **Smart Contract Settlement** via [`PayProofPayments.sol`](file:///C:/Users/NO%20GO%20NO/payproof/contracts/PayProofPayments.sol) (emitting canonical `PaymentCompleted` events with cryptographic parameters) and direct peer-to-peer ERC-20 transfers. Funds always route directly to the merchant wallet with zero custody.
+* **Independent Verification**: PayProof queries Arc Mainnet directly via JSON-RPC. A payment is only marked `PAID` after verifying on-chain execution, contract address, recipient address, exact 6-decimal base units, and `PaymentCompleted` or `Transfer` logs.
 * **Instant, Verifiable Proof**: Upon confirmation, an immutable `PaymentReceipt` is generated that anyone can verify on Arc Mainnet.
-* **Zero Backend Required (V1)**: The core payment request and checkout protocol is completely stateless—parameters are serialized directly into portable Base64URL links with integrity checksums.
+* **Stateless Portability**: The core payment request parameters are serialized into compact, tamper-evident Base64URL links with deterministic integrity checksums.
 
 ---
 
@@ -321,7 +321,10 @@ ARC_RPC_FALLBACK_URL=""
 PayProof enforces automated testing, typechecking, and static analysis:
 
 ```bash
-# Run complete test suite (65 tests across 8 test suites)
+# Compile contracts with Solc 0.8.28
+npm run compile
+
+# Run complete test suite (85 tests across 10 test suites)
 npm test
 
 # Run read-only Arc Mainnet live smoke test (zero funds spent)
@@ -339,7 +342,9 @@ npm run build
 
 ### Current Verified Test Suite Status:
 ```text
+ ✓ tests/approval-security.test.ts (12 tests)
  ✓ tests/verifier.test.ts (19 tests)
+ ✓ tests/contract-verifier.test.ts (8 tests)
  ✓ tests/request-encoding.test.ts (13 tests)
  ✓ tests/hydration.test.tsx (9 tests)
  ✓ tests/units.test.ts (8 tests)
@@ -348,8 +353,9 @@ npm run build
  ✓ tests/receipt.test.ts (3 tests)
  ✓ tests/payments.test.ts (2 tests)
 
-Test Files:  8 passed (8)
-Tests:       65 passed (65)
+Test Files:  10 passed (10)
+Tests:       85 passed (85)
+Contract:    18/18 on-chain formal requirements verified in Solidity test suite
 TypeScript:  0 errors (tsc --noEmit clean)
 ESLint:      0 errors, 0 warnings
 Build:       Clean static and dynamic page generation
@@ -362,6 +368,9 @@ Build:       Clean static and dynamic page generation
 * **Public Production Deployment**: [https://payproof-puce.vercel.app](https://payproof-puce.vercel.app)
 * **Vercel Project**: `payproof` (`jamism123/payproof`)
 * **Deployment Target**: Production (Arc Mainnet Chain ID: `5042`)
+* **PayProofPayments Contract**: [`0x87d4a1669336882e3355b83f953ad3b8b944c908`](https://explorer.arc.io/address/0x87d4a1669336882e3355b83f953ad3b8b944c908)
+* **Contract Deployment Tx**: [`0x47012ff7ac41ea8ab8f12fcaf1ac28958015c8f0010466a1f2049ebcead308f6`](https://explorer.arc.io/tx/0x47012ff7ac41ea8ab8f12fcaf1ac28958015c8f0010466a1f2049ebcead308f6)
+* **Official Arc USDC**: `0x3600000000000000000000000000000000000000`
 
 ### Domain Reputation Notice
 > **Notice on Current Deployment**: The current deployment on `*.vercel.app` is an ephemeral project domain. Automated wallet security providers (Blockaid / Coinbase Wallet / MetaMask) apply zero-trust heuristics to newly created `*.vercel.app` subdomains prompting Web3 wallet connections.  

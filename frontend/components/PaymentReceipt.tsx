@@ -305,6 +305,39 @@ export function PaymentReceiptView({ receiptToken }: PaymentReceiptViewProps) {
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                  <span style={{ color: 'var(--muted)' }}>Payment ID:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--fg)', fontFamily: 'monospace', fontSize: 12 }}>
+                    {receipt.paymentId}
+                  </span>
+                </div>
+
+                {receipt.contractAddress && receipt.contractAddress !== '0x0000000000000000000000000000000000000000' && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                      <span style={{ color: 'var(--muted)' }}>PayProof Contract:</span>
+                      <span style={{ fontWeight: 600, color: 'var(--primary)', fontFamily: 'monospace', fontSize: 12 }}>
+                        {truncate(receipt.contractAddress)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                      <span style={{ color: 'var(--muted)' }}>Settlement Event:</span>
+                      <span style={{ fontWeight: 600, color: '#10B981', fontFamily: 'monospace', fontSize: 12 }}>
+                        {receipt.eventName || 'PaymentCompleted'} (Verified)
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {receipt.requestHash && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                    <span style={{ color: 'var(--muted)' }}>Request Integrity Hash:</span>
+                    <span style={{ fontWeight: 600, color: 'var(--muted)', fontFamily: 'monospace', fontSize: 11 }}>
+                      {truncate(receipt.requestHash)}
+                    </span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                   <span style={{ color: 'var(--muted)' }}>Network & Asset:</span>
                   <span style={{ fontWeight: 600, color: 'var(--fg)' }}>Arc Mainnet (5042) &middot; USDC</span>
                 </div>

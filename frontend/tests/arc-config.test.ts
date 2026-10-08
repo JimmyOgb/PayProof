@@ -44,5 +44,6 @@ describe("Frontend Arc Configuration", () => {
     expect(config.rpcUrl).toBe(DEFAULT_ARC_RPC_URL);
     expect(config.explorerUrl).toBe(DEFAULT_ARC_EXPLORER_URL);
     expect(config.usdcContractAddress).toBe(DEFAULT_ARC_USDC_ADDRESS);
+    expect(config.paymentsContractAddress).toBeDefined();
   });
 });

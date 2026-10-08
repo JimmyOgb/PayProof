@@ -20,6 +20,7 @@ export interface ArcConfig {
   rpcFallbackUrl?: string;
   explorerUrl: string;
   usdcContractAddress: `0x${string}`;
+  paymentsContractAddress: `0x${string}`;
 }
 
 export const ARC_MAINNET_CHAIN_ID = 5042;
@@ -27,6 +28,9 @@ export const DEFAULT_ARC_RPC_URL = "https://rpc.mainnet.arc.io";
 export const DEFAULT_ARC_EXPLORER_URL = "https://explorer.arc.io";
 export const DEFAULT_ARC_USDC_ADDRESS: `0x${string}` =
   "0x3600000000000000000000000000000000000000";
+// Canonical deployed address for PayProofPayments contract on Arc Mainnet
+export const DEFAULT_ARC_PAYMENTS_ADDRESS: `0x${string}` =
+  "0x87d4a1669336882e3355b83f953ad3b8b944c908";
 export const ARC_ERC20_USDC_DECIMALS = 6;
 export const ARC_NATIVE_GAS_DECIMALS = 18;
 
@@ -51,6 +55,9 @@ export function getArcConfig(): ArcConfig {
   const usdcContractAddress = (process.env.NEXT_PUBLIC_ARC_USDC_ADDRESS ||
     DEFAULT_ARC_USDC_ADDRESS) as `0x${string}`;
 
+  const paymentsContractAddress = (process.env.NEXT_PUBLIC_ARC_PAYMENTS_CONTRACT_ADDRESS ||
+    DEFAULT_ARC_PAYMENTS_ADDRESS) as `0x${string}`;
+
   return {
     chainId,
     chainName: "Arc Mainnet",
@@ -61,6 +68,7 @@ export function getArcConfig(): ArcConfig {
     rpcFallbackUrl,
     explorerUrl,
     usdcContractAddress,
+    paymentsContractAddress,
   };
 }
 

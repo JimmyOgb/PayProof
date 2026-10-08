@@ -45,6 +45,9 @@ export function buildPaymentReceipt(
     verifiedAt: verification.verifiedAt,
     reference: request.reference,
     description: request.description,
+    contractAddress: verification.contractAddress,
+    requestHash: verification.requestHash ?? request.requestHash,
+    eventName: verification.eventName,
   };
 }
 
