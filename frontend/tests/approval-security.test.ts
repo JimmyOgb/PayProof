@@ -388,4 +388,57 @@ describe("USDC Approval & Settlement Security Audit Tests", () => {
       );
     });
   });
+
+  describe("5. Peer-to-Peer Transfer & Recipient Validation Security", () => {
+    it("rejects zero address merchant in sendUSDCPayment", async () => {
+      const { sendUSDCPayment } = await import("../lib/payments/transfer");
+      const mockWalletClient = {
+        getChainId: vi.fn().mockResolvedValue(ARC_MAINNET_CHAIN_ID),
+        getAddresses: vi.fn().mockResolvedValue([CUSTOMER_ADDR]),
+        writeContract: vi.fn(),
+      } as unknown as WalletClient;
+
+      await expect(
+        sendUSDCPayment(mockWalletClient, {
+          merchantAddress: "0x0000000000000000000000000000000000000000",
+          amountRaw: 10_000_000n,
+        })
+      ).rejects.toThrow("cannot transfer to zero address");
+    });
+
+    it("rejects rogue token address in sendUSDCPayment", async () => {
+      const { sendUSDCPayment } = await import("../lib/payments/transfer");
+      const mockWalletClient = {
+        getChainId: vi.fn().mockResolvedValue(ARC_MAINNET_CHAIN_ID),
+        getAddresses: vi.fn().mockResolvedValue([CUSTOMER_ADDR]),
+        writeContract: vi.fn(),
+      } as unknown as WalletClient;
+
+      await expect(
+        sendUSDCPayment(mockWalletClient, {
+          merchantAddress: MERCHANT_ADDR,
+          amountRaw: 10_000_000n,
+          usdcContractAddress: ROGUE_TOKEN,
+        })
+      ).rejects.toThrow("must be official Arc USDC");
+    });
+
+    it("rejects zero address merchant in validatePaymentRequest", async () => {
+      const { validatePaymentRequest } = await import("../lib/payments/validation");
+      const result = validatePaymentRequest({
+        version: 1,
+        id: "pp_test_zero",
+        merchantAddress: "0x0000000000000000000000000000000000000000",
+        amountRaw: 10_000_000n,
+        amountFormatted: "10.00",
+        currency: "USDC",
+        chainId: ARC_MAINNET_CHAIN_ID,
+        assetAddress: DEFAULT_ARC_USDC_ADDRESS,
+        createdAt: Date.now(),
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain("Merchant wallet address cannot be the zero address.");
+    });
+  });
 });

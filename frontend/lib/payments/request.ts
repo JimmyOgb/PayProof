@@ -110,6 +110,9 @@ export function createPaymentRequest(
   }
 
   const checksummedMerchant = getAddress(input.merchantAddress);
+  if (checksummedMerchant === "0x0000000000000000000000000000000000000000") {
+    throw new Error("Merchant wallet address cannot be the zero address.");
+  }
   const amountRaw = parseUSDCAmount(input.amount);
 
   if (amountRaw <= 0n) {
@@ -199,6 +202,9 @@ export function deserializePaymentRequest(
     throw new Error("Invalid merchant wallet address in payment request.");
   }
   const checksummedMerchant = getAddress(wire.m);
+  if (checksummedMerchant === "0x0000000000000000000000000000000000000000") {
+    throw new Error("Merchant wallet address cannot be the zero address.");
+  }
 
   if (wire.ch !== ARC_MAINNET_CHAIN_ID) {
     throw new Error(

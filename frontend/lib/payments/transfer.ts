@@ -311,9 +311,17 @@ export async function sendUSDCPayment(
   params: USDCTransferParams
 ): Promise<`0x${string}`> {
   const merchant = getAddress(params.merchantAddress);
+  if (merchant === "0x0000000000000000000000000000000000000000") {
+    throw new Error("Invalid merchant address: cannot transfer to zero address");
+  }
+
   const tokenAddress = params.usdcContractAddress
     ? getAddress(params.usdcContractAddress)
     : DEFAULT_ARC_USDC_ADDRESS;
+
+  if (tokenAddress.toLowerCase() !== DEFAULT_ARC_USDC_ADDRESS.toLowerCase()) {
+    throw new Error(`Invalid token address: must be official Arc USDC (${DEFAULT_ARC_USDC_ADDRESS})`);
+  }
 
   if (params.amountRaw <= 0n) {
     throw new Error("Payment amount must be greater than zero");

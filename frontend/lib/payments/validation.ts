@@ -37,6 +37,8 @@ export function validatePaymentRequest(
   // Merchant Address
   if (!request.merchantAddress || !isAddress(request.merchantAddress)) {
     errors.push("Invalid merchant wallet address.");
+  } else if (getAddress(request.merchantAddress) === "0x0000000000000000000000000000000000000000") {
+    errors.push("Merchant wallet address cannot be the zero address.");
   }
 
   // Chain ID
